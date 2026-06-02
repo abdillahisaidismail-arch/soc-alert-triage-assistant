@@ -1,17 +1,756 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>SOC Alert Triage Assistant</title>
-    <style>
-        body { font-family: Arial, sans-serif; padding: 40px; background: #f4f4f4; }
-        h1 { color: #2c3e50; }
-        p { color: #555; }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SOC Alert Triage Assistant</title>
+  <style>
+    /* ── Design tokens ─────────────────────────────────────── */
+    :root {
+      --bg:          #0d1117;
+      --surface:     #161b22;
+      --surface-2:   #1c2128;
+      --border:      #30363d;
+      --text:        #e6edf3;
+      --text-muted:  #8b949e;
+      --text-faint:  #484f58;
+      --accent:      #58a6ff;
+      --accent-dim:  #1f3a5f;
+
+      --critical: #ff4d4f;
+      --critical-dim: #3d1010;
+      --high:     #fa8c16;
+      --high-dim: #3d2408;
+      --medium:   #fadb14;
+      --medium-dim: #3d3408;
+      --low:      #52c41a;
+      --low-dim:  #0f3d08;
+
+      --radius-sm: 4px;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      --space-1: 4px; --space-2: 8px; --space-3: 12px;
+      --space-4: 16px; --space-6: 24px; --space-8: 32px;
+      --transition: 160ms cubic-bezier(0.16,1,0.3,1);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { -webkit-font-smoothing: antialiased; scroll-behavior: smooth; }
+
+    body {
+      font-family: 'JetBrains Mono', 'Fira Code', 'Menlo', monospace;
+      font-size: 13px;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Layout ─────────────────────────────────────────────── */
+    header {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-4) var(--space-6);
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    header svg { flex-shrink: 0; }
+
+    .header-title {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      color: var(--text);
+    }
+    .header-subtitle {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 1px;
+    }
+    .header-tag {
+      margin-left: auto;
+      font-size: 10px;
+      padding: 2px var(--space-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+    }
+
+    main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 0;
+      min-height: 0;
+    }
+
+    /* ── Left panel: input form ──────────────────────────────── */
+    .panel-left {
+      border-right: 1px solid var(--border);
+      padding: var(--space-6);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+      overflow-y: auto;
+    }
+
+    .section-label {
+      font-size: 10px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--text-faint);
+      margin-bottom: var(--space-2);
+    }
+
+    .field-group { display: flex; flex-direction: column; gap: var(--space-2); }
+
+    label {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    input, select {
+      width: 100%;
+      padding: var(--space-2) var(--space-3);
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 13px;
+      transition: border-color var(--transition);
+      outline: none;
+    }
+    input:focus, select:focus { border-color: var(--accent); }
+    select option { background: var(--surface-2); }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-3);
+    }
+
+    .btn-triage {
+      width: 100%;
+      padding: var(--space-3);
+      background: var(--accent);
+      color: #0d1117;
+      border: none;
+      border-radius: var(--radius-md);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: 0.3px;
+      transition: opacity var(--transition), transform var(--transition);
+    }
+    .btn-triage:hover  { opacity: 0.88; }
+    .btn-triage:active { transform: scale(0.98); }
+    .btn-triage:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    /* Quick-load presets */
+    .presets {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+    }
+    .preset-btn {
+      padding: 3px var(--space-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: transparent;
+      color: var(--text-muted);
+      font-family: inherit;
+      font-size: 11px;
+      cursor: pointer;
+      transition: border-color var(--transition), color var(--transition);
+    }
+    .preset-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Right panel: results ────────────────────────────────── */
+    .panel-right {
+      padding: var(--space-6);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-6);
+      overflow-y: auto;
+    }
+
+    /* Empty / loading states */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      gap: var(--space-4);
+      color: var(--text-faint);
+      text-align: center;
+      min-height: 300px;
+    }
+    .empty-state svg { opacity: 0.3; }
+    .empty-state p { font-size: 12px; max-width: 28ch; line-height: 1.6; }
+
+    /* ── Incident result card ───────────────────────────────── */
+    .result-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      animation: fadeSlideIn 220ms cubic-bezier(0.16,1,0.3,1) both;
+    }
+    @keyframes fadeSlideIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .result-header {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-4) var(--space-6);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .severity-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: var(--space-1) var(--space-3);
+      border-radius: var(--radius-full, 9999px);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    .severity-badge::before {
+      content: '';
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+    .badge-CRITICAL { background: var(--critical-dim); color: var(--critical); }
+    .badge-HIGH     { background: var(--high-dim);     color: var(--high); }
+    .badge-MEDIUM   { background: var(--medium-dim);   color: var(--medium); }
+    .badge-LOW      { background: var(--low-dim);      color: var(--low); }
+
+    .incident-id {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-left: auto;
+      font-weight: 400;
+    }
+
+    /* Score gauge */
+    .score-row {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      padding: var(--space-4) var(--space-6);
+      border-bottom: 1px solid var(--border);
+    }
+    .score-number {
+      font-size: 36px;
+      font-weight: 700;
+      min-width: 60px;
+      line-height: 1;
+    }
+    .score-track {
+      flex: 1;
+      height: 8px;
+      background: var(--surface-2);
+      border-radius: 9999px;
+      overflow: hidden;
+    }
+    .score-fill {
+      height: 100%;
+      border-radius: 9999px;
+      transition: width 500ms cubic-bezier(0.16,1,0.3,1);
+    }
+    .score-label { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+    /* Info rows */
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      background: var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+    .info-cell {
+      background: var(--surface);
+      padding: var(--space-3) var(--space-6);
+    }
+    .info-cell-label { font-size: 10px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.6px; }
+    .info-cell-value { font-size: 13px; color: var(--text); margin-top: 2px; font-weight: 500; }
+
+    .mitre-tag {
+      display: inline-block;
+      padding: 2px var(--space-2);
+      border: 1px solid var(--accent-dim);
+      border-radius: var(--radius-sm);
+      background: var(--accent-dim);
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    /* Text blocks */
+    .text-block {
+      padding: var(--space-4) var(--space-6);
+      border-bottom: 1px solid var(--border);
+    }
+    .text-block:last-child { border-bottom: none; }
+    .text-block-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-faint);
+      margin-bottom: var(--space-2);
+    }
+    .text-block-content {
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.65;
+    }
+
+    .recommendation-box {
+      background: color-mix(in oklab, var(--accent) 6%, var(--surface));
+      border-left: 3px solid var(--accent);
+      padding: var(--space-3) var(--space-4);
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      font-size: 13px;
+      line-height: 1.65;
+      color: var(--text);
+    }
+
+    /* Raw JSON detail */
+    .detail-toggle {
+      all: unset;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-3) var(--space-6);
+      font-size: 11px;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border);
+      width: 100%;
+      transition: color var(--transition);
+    }
+    .detail-toggle:hover { color: var(--accent); }
+    .detail-toggle svg { transition: transform var(--transition); }
+    .detail-toggle.open svg { transform: rotate(90deg); }
+
+    .detail-json {
+      display: none;
+      padding: var(--space-3) var(--space-6) var(--space-4);
+    }
+    .detail-json.open { display: block; }
+    .detail-json pre {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: var(--space-3);
+      font-size: 11px;
+      color: var(--text-muted);
+      overflow-x: auto;
+      line-height: 1.5;
+    }
+
+    /* Error state */
+    .error-banner {
+      background: #3d1010;
+      border: 1px solid var(--critical);
+      border-radius: var(--radius-md);
+      padding: var(--space-3) var(--space-4);
+      color: var(--critical);
+      font-size: 12px;
+      animation: fadeSlideIn 200ms both;
+    }
+
+    /* Spinner */
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      display: none;
+    }
+    .btn-triage.loading .spinner { display: inline-block; }
+    .btn-triage.loading .btn-text { display: none; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      main { grid-template-columns: 1fr; }
+      .panel-left { border-right: none; border-bottom: 1px solid var(--border); }
+      .form-grid { grid-template-columns: 1fr; }
+      .info-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <h1>🛡️ SOC Alert Triage Assistant</h1>
-    <p>Your Spring Boot app is running correctly on port 8081.</p>
-    <p>Ready to start building the triage dashboard!</p>
+
+<!-- ── Header ──────────────────────────────────────────────── -->
+<header>
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#58a6ff" stroke-width="1.8" aria-hidden="true">
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+    <path d="M9 12l2 2 4-4"/>
+  </svg>
+  <div>
+    <div class="header-title">SOC Alert Triage Assistant</div>
+    <div class="header-subtitle">AI-driven incident scoring &amp; MITRE ATT&amp;CK mapping</div>
+  </div>
+  <span class="header-tag">PORT 8081</span>
+</header>
+
+<!-- ── Main ────────────────────────────────────────────────── -->
+<main>
+
+  <!-- Left: Alert input form -->
+  <section class="panel-left" aria-label="Alert input">
+
+    <div>
+      <p class="section-label">Quick presets</p>
+      <div class="presets">
+        <button class="preset-btn" data-preset="brute">Brute Force</button>
+        <button class="preset-btn" data-preset="portscan">Port Scan</button>
+        <button class="preset-btn" data-preset="malware">Malware</button>
+        <button class="preset-btn" data-preset="sqli">SQL Injection</button>
+        <button class="preset-btn" data-preset="stuffing">Cred Stuffing</button>
+      </div>
+    </div>
+
+    <hr style="border-color: var(--border);" />
+
+    <form id="triageForm" novalidate>
+      <p class="section-label" style="margin-bottom: var(--space-3);">Alert fields</p>
+
+      <div class="field-group" style="margin-bottom: var(--space-3);">
+        <label for="ruleName">Rule name *</label>
+        <input id="ruleName" name="ruleName" type="text"
+               placeholder="e.g. Failed Login Brute Force" required />
+      </div>
+
+      <div class="form-grid" style="margin-bottom: var(--space-3);">
+        <div class="field-group">
+          <label for="severity">Declared severity *</label>
+          <select id="severity" name="severity" required>
+            <option value="">— select —</option>
+            <option value="CRITICAL">CRITICAL</option>
+            <option value="HIGH">HIGH</option>
+            <option value="MEDIUM">MEDIUM</option>
+            <option value="LOW">LOW</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label for="assetCriticality">Asset criticality</label>
+          <select id="assetCriticality" name="assetCriticality">
+            <option value="">— select —</option>
+            <option value="HIGH">HIGH</option>
+            <option value="MEDIUM">MEDIUM</option>
+            <option value="LOW">LOW</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-grid" style="margin-bottom: var(--space-3);">
+        <div class="field-group">
+          <label for="srcIp">Source IP</label>
+          <input id="srcIp" name="srcIp" type="text" placeholder="192.168.1.50" />
+        </div>
+        <div class="field-group">
+          <label for="host">Target host</label>
+          <input id="host" name="host" type="text" placeholder="web-prod-01" />
+        </div>
+      </div>
+
+      <div class="form-grid" style="margin-bottom: var(--space-3);">
+        <div class="field-group">
+          <label for="user">Username</label>
+          <input id="user" name="user" type="text" placeholder="alice" />
+        </div>
+        <div class="field-group">
+          <label for="category">Category</label>
+          <input id="category" name="category" type="text" placeholder="auth" />
+        </div>
+      </div>
+
+      <div class="field-group" style="margin-bottom: var(--space-4);">
+        <label for="alertId">Alert ID (optional)</label>
+        <input id="alertId" name="alertId" type="text" placeholder="EVT-001" />
+      </div>
+
+      <button type="submit" class="btn-triage" id="submitBtn">
+        <span class="btn-text">▶ Run Triage</span>
+        <span class="spinner" aria-hidden="true"></span>
+      </button>
+    </form>
+
+  </section>
+
+  <!-- Right: Results -->
+  <section class="panel-right" aria-label="Triage results" id="resultsPanel">
+
+    <div class="empty-state" id="emptyState">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        <path d="M12 8v4M12 16h.01"/>
+      </svg>
+      <p>Submit an alert on the left to run triage and see the incident analysis here.</p>
+    </div>
+
+    <div id="errorBanner" class="error-banner" style="display:none;"></div>
+
+    <div id="resultCard" class="result-card" style="display:none;">
+
+      <!-- Severity header -->
+      <div class="result-header">
+        <span id="severityBadge" class="severity-badge"></span>
+        <span id="incidentId" class="incident-id"></span>
+      </div>
+
+      <!-- Score gauge -->
+      <div class="score-row">
+        <div>
+          <div class="score-number" id="scoreNumber">—</div>
+          <div class="score-label">risk score</div>
+        </div>
+        <div style="flex:1">
+          <div class="score-track">
+            <div class="score-fill" id="scoreFill" style="width:0%"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:4px;">
+            <span class="score-label">0</span>
+            <span class="score-label">100</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Info grid -->
+      <div class="info-grid">
+        <div class="info-cell">
+          <div class="info-cell-label">MITRE ATT&amp;CK</div>
+          <div class="info-cell-value" id="mitreCell">—</div>
+        </div>
+        <div class="info-cell">
+          <div class="info-cell-label">Source IP</div>
+          <div class="info-cell-value" id="ipCell">—</div>
+        </div>
+        <div class="info-cell">
+          <div class="info-cell-label">Target host</div>
+          <div class="info-cell-value" id="hostCell">—</div>
+        </div>
+        <div class="info-cell">
+          <div class="info-cell-label">User</div>
+          <div class="info-cell-value" id="userCell">—</div>
+        </div>
+      </div>
+
+      <!-- Explanation -->
+      <div class="text-block">
+        <div class="text-block-label">Why this severity?</div>
+        <div class="text-block-content" id="explanationText"></div>
+      </div>
+
+      <!-- Recommendation -->
+      <div class="text-block">
+        <div class="text-block-label">Analyst recommendation</div>
+        <div class="recommendation-box" id="recommendationText"></div>
+      </div>
+
+      <!-- Raw JSON toggle -->
+      <button class="detail-toggle" id="detailToggle" aria-expanded="false">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <polyline points="9 18 15 12 9 6"/>
+        </svg>
+        Raw incident JSON
+      </button>
+      <div class="detail-json" id="detailJson">
+        <pre id="jsonPre"></pre>
+      </div>
+
+    </div>
+  </section>
+
+</main>
+
+<script>
+  // ── Preset payloads ──────────────────────────────────────────
+  const PRESETS = {
+    brute: {
+      ruleName: 'Failed Login Brute Force', severity: 'HIGH',
+      assetCriticality: 'HIGH', srcIp: '192.168.1.50',
+      host: 'auth-server-01', user: 'alice', category: 'auth', id: 'EVT-001'
+    },
+    portscan: {
+      ruleName: 'Port Scan Detected', severity: 'MEDIUM',
+      assetCriticality: 'LOW', srcIp: '10.0.0.99',
+      host: 'dmz-gateway', user: '', category: 'network', id: 'EVT-002'
+    },
+    malware: {
+      ruleName: 'Malware Detected on Endpoint', severity: 'CRITICAL',
+      assetCriticality: 'HIGH', srcIp: '172.16.0.12',
+      host: 'laptop-cfo-01', user: 'cfo', category: 'malware', id: 'EVT-003'
+    },
+    sqli: {
+      ruleName: 'SQL Injection Attempt', severity: 'HIGH',
+      assetCriticality: 'HIGH', srcIp: '203.0.113.42',
+      host: 'web-prod-01', user: '', category: 'web', id: 'EVT-004'
+    },
+    stuffing: {
+      ruleName: 'Credential Stuffing Attack', severity: 'HIGH',
+      assetCriticality: 'MEDIUM', srcIp: '198.51.100.7',
+      host: 'login.example.com', user: 'many', category: 'auth', id: 'EVT-005'
+    }
+  };
+
+  // ── Populate form from preset ────────────────────────────────
+  document.querySelectorAll('.preset-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const p = PRESETS[btn.dataset.preset];
+      if (!p) return;
+      document.getElementById('ruleName').value        = p.ruleName        || '';
+      document.getElementById('severity').value        = p.severity        || '';
+      document.getElementById('assetCriticality').value = p.assetCriticality || '';
+      document.getElementById('srcIp').value           = p.srcIp           || '';
+      document.getElementById('host').value            = p.host            || '';
+      document.getElementById('user').value            = p.user            || '';
+      document.getElementById('category').value        = p.category        || '';
+      document.getElementById('alertId').value         = p.id              || '';
+    });
+  });
+
+  // ── Severity colour map ──────────────────────────────────────
+  const SEV_COLOR = {
+    CRITICAL: 'var(--critical)',
+    HIGH:     'var(--high)',
+    MEDIUM:   'var(--medium)',
+    LOW:      'var(--low)'
+  };
+
+  // ── Form submit → POST /api/alerts/triage ───────────────────
+  document.getElementById('triageForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.classList.add('loading');
+    document.getElementById('errorBanner').style.display = 'none';
+    document.getElementById('resultCard').style.display  = 'none';
+    document.getElementById('emptyState').style.display  = 'none';
+
+    const payload = {
+      id:               document.getElementById('alertId').value.trim()            || null,
+      ruleName:         document.getElementById('ruleName').value.trim()           || null,
+      severity:         document.getElementById('severity').value                  || null,
+      assetCriticality: document.getElementById('assetCriticality').value          || null,
+      srcIp:            document.getElementById('srcIp').value.trim()              || null,
+      host:             document.getElementById('host').value.trim()               || null,
+      user:             document.getElementById('user').value.trim()               || null,
+      category:         document.getElementById('category').value.trim()           || null,
+      timestamp:        Date.now()
+    };
+
+    try {
+      const res  = await fetch('/api/alerts/triage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error('Server responded ' + res.status + ': ' + txt);
+      }
+
+      const data = await res.json();
+      renderResult(data);
+
+    } catch (err) {
+      const banner = document.getElementById('errorBanner');
+      banner.textContent = '⚠ ' + err.message;
+      banner.style.display = 'block';
+      document.getElementById('emptyState').style.display = 'flex';
+    } finally {
+      btn.disabled = false;
+      btn.classList.remove('loading');
+    }
+  });
+
+  // ── Render triage result ─────────────────────────────────────
+  function renderResult(data) {
+    const sev   = (data.severity  || 'LOW').toUpperCase();
+    const score = data.riskScore  || 0;
+    const pct   = Math.min(score, 100);
+    const color = SEV_COLOR[sev] || SEV_COLOR.LOW;
+
+    // Severity badge
+    const badge = document.getElementById('severityBadge');
+    badge.textContent = sev;
+    badge.className   = 'severity-badge badge-' + sev;
+
+    document.getElementById('incidentId').textContent = data.incidentId || '';
+
+    // Score gauge
+    document.getElementById('scoreNumber').textContent = score;
+    const fill = document.getElementById('scoreFill');
+    fill.style.background = color;
+    // Trigger reflow then animate
+    fill.style.width = '0%';
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      fill.style.width = pct + '%';
+    }));
+
+    // Info grid
+    const src = data.sourceAlert || {};
+    renderMitreTag(data.mitreTechnique);
+    document.getElementById('ipCell').textContent   = src.srcIp    || '—';
+    document.getElementById('hostCell').textContent = src.host     || '—';
+    document.getElementById('userCell').textContent = src.user     || '—';
+
+    document.getElementById('explanationText').textContent   = data.explanation   || '';
+    document.getElementById('recommendationText').textContent = data.recommendation || '';
+
+    // Raw JSON
+    document.getElementById('jsonPre').textContent = JSON.stringify(data, null, 2);
+
+    // Show card, hide empty state
+    document.getElementById('resultCard').style.display = 'block';
+    document.getElementById('emptyState').style.display = 'none';
+  }
+
+  function renderMitreTag(technique) {
+    const cell = document.getElementById('mitreCell');
+    if (!technique || technique.startsWith('T0000')) {
+      cell.textContent = '—';
+      return;
+    }
+    const tag = document.createElement('span');
+    tag.className = 'mitre-tag';
+    tag.textContent = technique;
+    cell.innerHTML = '';
+    cell.appendChild(tag);
+  }
+
+  // ── Raw JSON toggle ──────────────────────────────────────────
+  document.getElementById('detailToggle').addEventListener('click', function () {
+    const json = document.getElementById('detailJson');
+    const open = json.classList.toggle('open');
+    this.classList.toggle('open', open);
+    this.setAttribute('aria-expanded', open);
+  });
+</script>
+
 </body>
 </html>
