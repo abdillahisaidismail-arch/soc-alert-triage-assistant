@@ -1,0 +1,8 @@
+/Users/abdillahi/soc-alert-triage-assistant/src/main/java/com/abdillahi/soc/triage/AlertScorer.java
+/Users/abdillahi/soc-alert-triage-assistant/src/main/java/com/abdillahi/soc/triage/DetectionEngine.java
+/Users/abdillahi/soc-alert-triage-assistant/src/main/java/com/abdillahi/soc/triage/IncidentGrouper.java
+/Users/abdillahi/soc-alert-triage-assistant/src/main/java/com/abdillahi/soc/HomeController.java
+/Users/abdillahi/soc-alert-triage-assistant/src/main/java/com/abdillahi/soc/io/AlertLoader.java
+/Users/abdillahi/soc-alert-triage-assistant/src/main/java/com/abdillahi/soc/model/Alert.java
+/Users/abdillahi/soc-alert-triage-assistant/src/main/java/com/abdillahi/soc/App.java
+/Users/abdillahi/soc-alert-triage-assistant/src/main/java/com/abdillahi/soc/triage/Incident.java

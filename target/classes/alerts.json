@@ -1,0 +1,62 @@
+[
+  {
+    "id": "a1",
+    "source": "mini-soc-lab",
+    "ruleName": "Failed Login - Windows",
+    "severity": "MEDIUM",
+    "host": "WS-01",
+    "user": "alice",
+    "srcIp": "203.0.113.10",
+    "category": "auth",
+    "assetCriticality": "MEDIUM",
+    "timestamp": 1717329120000
+  },
+  {
+    "id": "a2",
+    "source": "mini-soc-lab",
+    "ruleName": "Failed Login - Windows",
+    "severity": "MEDIUM",
+    "host": "WS-01",
+    "user": "alice",
+    "srcIp": "203.0.113.10",
+    "category": "auth",
+    "assetCriticality": "MEDIUM",
+    "timestamp": 1717329180000
+  },
+  {
+    "id": "a3",
+    "source": "mini-soc-lab",
+    "ruleName": "Successful Admin Login",
+    "severity": "HIGH",
+    "host": "AD-01",
+    "user": "alice",
+    "srcIp": "203.0.113.10",
+    "category": "auth",
+    "assetCriticality": "HIGH",
+    "timestamp": 1717329300000
+  },
+  {
+    "id": "a4",
+    "source": "mini-soc-lab",
+    "ruleName": "Malware Detected",
+    "severity": "CRITICAL",
+    "host": "WS-02",
+    "user": "bob",
+    "srcIp": "10.0.0.55",
+    "category": "malware",
+    "assetCriticality": "HIGH",
+    "timestamp": 1717329400000
+  },
+  {
+    "id": "a5",
+    "source": "mini-soc-lab",
+    "ruleName": "Port Scan Detected",
+    "severity": "LOW",
+    "host": "FW-01",
+    "user": "",
+    "srcIp": "198.51.100.7",
+    "category": "network",
+    "assetCriticality": "LOW",
+    "timestamp": 1717329500000
+  }
+]
