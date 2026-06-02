@@ -34,8 +34,6 @@
       padding:24px;
       gap:24px;
     }
-
-    /* login card */
     .login-card {
       width:100%; max-width:380px;
       background:var(--surface);
@@ -57,7 +55,6 @@
       border-radius:4px; color:var(--error);
     }
     .login-body { padding:20px 24px; display:flex; flex-direction:column; gap:14px; }
-
     label { font-size:11px; color:var(--muted); display:block; margin-bottom:5px; }
     input[type=text], input[type=password] {
       width:100%; padding:9px 12px;
@@ -76,13 +73,11 @@
       cursor:pointer; transition:opacity 160ms;
     }
     .btn-login:hover { opacity:0.88; }
-
     .banner { padding:10px 14px; border-radius:6px; font-size:12px; line-height:1.5; }
-    .banner-error   { background:var(--error-dim);   border:1px solid var(--error);   color:var(--error); }
-    .banner-success { background:var(--success-dim); border:1px solid var(--success); color:var(--success); }
-    .banner-warning { background:var(--warning-dim); border:1px solid var(--warning); color:var(--warning); }
-
-    /* incident card */
+    .banner-error    { background:var(--error-dim);    border:1px solid var(--error);    color:var(--error); }
+    .banner-success  { background:var(--success-dim);  border:1px solid var(--success);  color:var(--success); }
+    .banner-warning  { background:var(--warning-dim);  border:1px solid var(--warning);  color:var(--warning); }
+    .banner-critical { background:var(--critical-dim); border:1px solid var(--critical); color:var(--critical); }
     .incident-card {
       width:100%; max-width:520px;
       background:var(--surface);
@@ -91,7 +86,6 @@
       animation:fadeIn 300ms cubic-bezier(0.16,1,0.3,1) both;
     }
     @keyframes fadeIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
-
     .inc-header {
       display:flex; align-items:center; gap:10px;
       padding:14px 20px;
@@ -107,9 +101,7 @@
     .badge-HIGH     { background:var(--high-dim);     color:var(--high); }
     .badge-MEDIUM   { background:var(--medium-dim);   color:var(--medium); }
     .badge-LOW      { background:var(--low-dim);      color:var(--low); }
-
     .inc-id { margin-left:auto; font-size:11px; color:var(--muted); }
-
     .inc-score {
       display:flex; align-items:center; gap:12px;
       padding:12px 20px; border-bottom:1px solid var(--border);
@@ -117,7 +109,6 @@
     .score-num { font-size:32px; font-weight:700; min-width:50px; }
     .score-track { flex:1; height:7px; background:#1c2128; border-radius:9999px; overflow:hidden; }
     .score-fill  { height:100%; border-radius:9999px; }
-
     .inc-grid {
       display:grid; grid-template-columns:1fr 1fr;
       gap:1px; background:var(--border);
@@ -126,14 +117,12 @@
     .inc-cell { background:var(--surface); padding:10px 20px; }
     .inc-cell-label { font-size:10px; color:#484f58; text-transform:uppercase; letter-spacing:0.6px; }
     .inc-cell-value { font-size:12px; color:var(--text); margin-top:2px; font-weight:500; }
-
     .mitre-chip {
       display:inline-block; padding:1px 7px;
       background:#1f3a5f; border:1px solid #1f3a5f;
       border-radius:4px; color:var(--accent);
       font-size:11px; font-weight:600;
     }
-
     .inc-block { padding:12px 20px; border-bottom:1px solid var(--border); }
     .inc-block:last-child { border-bottom:none; }
     .inc-block-label { font-size:10px; color:#484f58; text-transform:uppercase; letter-spacing:0.8px; margin-bottom:6px; }
@@ -143,7 +132,6 @@
       padding:10px 14px; border-radius:0 6px 6px 0;
       font-size:12px; color:var(--text); line-height:1.65;
     }
-
     .action-row { display:flex; gap:8px; padding:14px 20px; flex-wrap:wrap; }
     .action-btn {
       padding:7px 14px; border-radius:6px;
@@ -154,7 +142,6 @@
     .action-lock    { background:var(--warning);  color:#0d1117; }
     .action-dismiss { background:var(--border);   color:var(--text); }
     .action-btn:hover { opacity:0.85; }
-
     .hint { font-size:11px; color:#484f58; text-align:center; }
   </style>
 </head>
@@ -175,19 +162,29 @@
 
     <div class="login-body">
 
-      <!-- success banner -->
+      <!-- success -->
       <div th:if="${success != null and success}" class="banner banner-success">
         &#x2714; Authenticated successfully. Welcome, admin.
       </div>
 
-      <!-- plain failure banner (no incident yet) -->
+      <!-- plain bad credentials -->
       <div th:if="${error != null and error and incident == null}" class="banner banner-error">
         &#x2718; Invalid credentials. Try again.
       </div>
 
-      <!-- threshold-crossed banner -->
-      <div th:if="${incident != null}" class="banner banner-warning">
-        &#x26A0; Brute-force threshold crossed &mdash; incident created &amp; email alert sent to abdillahipro@gmail.com.
+      <!-- malware / command injection -->
+      <div th:if="${incident != null and incident.mitreTechnique != null and #strings.contains(incident.mitreTechnique,'T1059')}" class="banner banner-critical">
+        &#x1F6A8; Malware / Command Injection detected &mdash; CRITICAL incident created &amp; email alert sent.
+      </div>
+
+      <!-- SQL injection -->
+      <div th:if="${incident != null and incident.mitreTechnique != null and #strings.contains(incident.mitreTechnique,'T1190')}" class="banner banner-warning">
+        &#x26A0; SQL Injection attempt detected &mdash; HIGH incident created &amp; email alert sent.
+      </div>
+
+      <!-- brute force -->
+      <div th:if="${incident != null and incident.mitreTechnique != null and #strings.contains(incident.mitreTechnique,'T1110')}" class="banner banner-warning">
+        &#x26A0; Brute-force threshold crossed &mdash; incident created &amp; email alert sent.
       </div>
 
       <form method="post" action="/login">
@@ -206,14 +203,18 @@
     </div>
   </div>
 
-  <!-- Live incident card — only shown when threshold crossed -->
+  <!-- Live incident card — shown whenever an incident is created -->
   <div th:if="${incident != null}" class="incident-card">
 
     <div class="inc-header">
       <span class="sev-badge"
             th:classappend="'badge-' + ${incident.severity}"
             th:text="${incident.severity}">HIGH</span>
-      <span style="font-size:13px;font-weight:600;">Brute Force Detected</span>
+      <!-- title derived from MITRE technique -->
+      <span style="font-size:13px;font-weight:600;"
+            th:text="${incident.mitreTechnique != null and #strings.contains(incident.mitreTechnique,'T1059')} ? 'Malware / Command Injection Detected' : (${incident.mitreTechnique != null and #strings.contains(incident.mitreTechnique,'T1190')} ? 'SQL Injection Detected' : 'Brute Force Detected')">
+        Attack Detected
+      </span>
       <span class="inc-id" th:text="${incident.incidentId}">INC-000</span>
     </div>
 
