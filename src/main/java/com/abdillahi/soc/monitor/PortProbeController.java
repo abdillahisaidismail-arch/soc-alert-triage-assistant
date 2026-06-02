@@ -13,15 +13,18 @@ public class PortProbeController {
     private final PortScanDetectorService detectorService;
     private final PortScanEmailService emailService;
     private final PortScanIncidentStore incidentStore;
+    private final UnifiedIncidentStore unifiedIncidentStore;
 
     public PortProbeController(
             PortScanDetectorService detectorService,
             PortScanEmailService emailService,
-            PortScanIncidentStore incidentStore
+            PortScanIncidentStore incidentStore,
+            UnifiedIncidentStore unifiedIncidentStore
     ) {
         this.detectorService = detectorService;
         this.emailService = emailService;
         this.incidentStore = incidentStore;
+        this.unifiedIncidentStore = unifiedIncidentStore;
     }
 
     @GetMapping("/{port}")
@@ -42,6 +45,7 @@ public class PortProbeController {
 
         if (incident != null) {
             incidentStore.save(incident);
+            unifiedIncidentStore.add(DashboardIncident.fromPortScan(incident));
             emailService.send(incident);
             return ResponseEntity.ok(Map.of(
                     "status", "incident_created",
