@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Action Confirmed — SOC Assistant</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root { --bg:#0d1117; --surface:#161b22; --border:#30363d; --text:#e6edf3; --muted:#8b949e; --accent:#58a6ff; --success:#52c41a; --success-dim:#0f3d08; }
+    *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+    body {
+      font-family:'JetBrains Mono',monospace; font-size:13px;
+      background:var(--bg); color:var(--text);
+      min-height:100dvh; display:flex; align-items:center; justify-content:center; padding:24px;
+    }
+    .card {
+      width:100%; max-width:460px;
+      background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden;
+      animation:fadeIn 280ms cubic-bezier(0.16,1,0.3,1) both;
+    }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+    .card-header {
+      padding:20px 24px; border-bottom:1px solid var(--border);
+      display:flex; align-items:center; gap:10px;
+    }
+    .confirmed-badge {
+      padding:3px 10px;
+      background:var(--success-dim); border:1px solid var(--success);
+      border-radius:9999px; color:var(--success);
+      font-size:11px; font-weight:700;
+    }
+    .card-body { padding:20px 24px; display:flex; flex-direction:column; gap:14px; }
+    .field-label { font-size:10px; color:#484f58; text-transform:uppercase; letter-spacing:0.6px; margin-bottom:3px; }
+    .field-value { font-size:13px; color:var(--text); font-weight:500; }
+    .message-box {
+      background:#0d1117; border:1px solid var(--border); border-radius:6px;
+      padding:12px 14px; font-size:12px; color:var(--muted); line-height:1.65;
+    }
+    .back-link { display:inline-block; margin-top:4px; color:var(--accent); font-size:12px; text-decoration:none; }
+    .back-link:hover { text-decoration:underline; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="card-header">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#52c41a" stroke-width="2">
+        <polyline points="20 6 9 17 4 12"/>
+      </svg>
+      <span style="font-size:14px;font-weight:700;">Action Confirmed</span>
+      <span class="confirmed-badge" th:text="${action}">Action</span>
+    </div>
+    <div class="card-body">
+      <div>
+        <div class="field-label">Incident</div>
+        <div class="field-value" th:text="${incident}">INC-000</div>
+      </div>
+      <div>
+        <div class="field-label">Target</div>
+        <div class="field-value" th:text="${target}">—</div>
+      </div>
+      <div>
+        <div class="field-label">Details</div>
+        <div class="message-box" th:text="${message}"></div>
+      </div>
+      <a href="/login" class="back-link">&#x2190; Back to login page</a>
+    </div>
+  </div>
+</body>
+</html>
