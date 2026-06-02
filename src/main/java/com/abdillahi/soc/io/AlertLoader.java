@@ -1,4 +1,4 @@
-package com.abdillahi.soc.io;             // ✅ correct
+package com.abdillahi.soc.io;
 
 import com.abdillahi.soc.model.Alert;
 import com.fasterxml.jackson.core.type.TypeReference;
