@@ -29,21 +29,24 @@ public class LoginController {
             "drop table", "insert into", "xp_cmdshell", "information_schema"
     );
 
-    private final AttackMonitorService monitor;
-    private final EmailAlertService emailService;
-    private final GeoIpService geoIpService;
-    private final UnifiedIncidentStore incidentStore;
+    private final AttackMonitorService  monitor;
+    private final EmailAlertService     emailService;
+    private final GeoIpService          geoIpService;
+    private final UnifiedIncidentStore  incidentStore;
+    private final RemediationStore      remediationStore;
 
     public LoginController(
             AttackMonitorService monitor,
             EmailAlertService emailService,
             GeoIpService geoIpService,
-            UnifiedIncidentStore incidentStore
+            UnifiedIncidentStore incidentStore,
+            RemediationStore remediationStore
     ) {
-        this.monitor = monitor;
-        this.emailService = emailService;
-        this.geoIpService = geoIpService;
-        this.incidentStore = incidentStore;
+        this.monitor          = monitor;
+        this.emailService     = emailService;
+        this.geoIpService     = geoIpService;
+        this.incidentStore    = incidentStore;
+        this.remediationStore = remediationStore;
     }
 
     @GetMapping("/login")
@@ -58,24 +61,31 @@ public class LoginController {
             HttpServletRequest request,
             Model model
     ) {
+        String sourceIp = resolveClientIp(request);
+
+        // Account locked check
+        if (remediationStore.isLocked(username)) {
+            model.addAttribute("accountLocked", true);
+            model.addAttribute("username", username);
+            model.addAttribute("error", true);
+            return "login";
+        }
+
+        // Valid credentials
         if (VALID_USER.equals(username) && VALID_PASS.equals(password)) {
             model.addAttribute("success", true);
             return "login";
         }
 
-        String sourceIp = resolveClientIp(request);
-        GeoIpInfo geo = geoIpService.lookup(sourceIp);
-        String combined = (username + " " + password).toLowerCase();
+        GeoIpInfo geo     = geoIpService.lookup(sourceIp);
+        String combined   = (username + " " + password).toLowerCase();
 
+        // Malware / command injection
         String malwareMatch = findMatch(combined, MALWARE_KEYWORDS);
         if (malwareMatch != null) {
-            TriageResponse triage = buildKeywordTriage(
-                    sourceIp, username, "auth-server-01",
-                    "Malware / Command Injection Attempt",
-                    "CRITICAL",
-                    "T1059 — Command and Scripting Interpreter",
-                    malwareMatch
-            );
+            TriageResponse triage = buildKeywordTriage(sourceIp, username, "auth-server-01",
+                    "Malware / Command Injection Attempt", "CRITICAL",
+                    "T1059 — Command and Scripting Interpreter", malwareMatch);
             emailService.sendIncidentAlert(triage);
             incidentStore.add(DashboardIncident.fromLogin(triage, geo));
             model.addAttribute("incident", triage);
@@ -84,15 +94,12 @@ public class LoginController {
             return "login";
         }
 
+        // SQL injection
         String sqliMatch = findMatch(combined, SQLI_KEYWORDS);
         if (sqliMatch != null) {
-            TriageResponse triage = buildKeywordTriage(
-                    sourceIp, username, "auth-server-01",
-                    "SQL Injection Attempt",
-                    "HIGH",
-                    "T1190 — Exploit Public-Facing Application",
-                    sqliMatch
-            );
+            TriageResponse triage = buildKeywordTriage(sourceIp, username, "auth-server-01",
+                    "SQL Injection Attempt", "HIGH",
+                    "T1190 — Exploit Public-Facing Application", sqliMatch);
             emailService.sendIncidentAlert(triage);
             incidentStore.add(DashboardIncident.fromLogin(triage, geo));
             model.addAttribute("incident", triage);
@@ -101,6 +108,7 @@ public class LoginController {
             return "login";
         }
 
+        // Brute force threshold
         TriageResponse triage = monitor.recordFailedLogin(sourceIp, username, "auth-server-01");
         if (triage != null) {
             emailService.sendIncidentAlert(triage);
@@ -121,54 +129,36 @@ public class LoginController {
     }
 
     private TriageResponse buildKeywordTriage(
-            String ip,
-            String user,
-            String host,
-            String ruleName,
-            String severity,
-            String mitre,
-            String matchedKeyword
+            String ip, String user, String host,
+            String ruleName, String severity, String mitre, String matchedKeyword
     ) {
         Alert alert = new Alert();
-        alert.id = "EVT-" + System.currentTimeMillis();
-        alert.ruleName = ruleName;
-        alert.severity = severity;
-        alert.srcIp = ip;
-        alert.user = user;
-        alert.host = host;
-        alert.category = "intrusion";
+        alert.id               = "EVT-" + System.currentTimeMillis();
+        alert.ruleName         = ruleName;
+        alert.severity         = severity;
+        alert.srcIp            = ip;
+        alert.user             = user;
+        alert.host             = host;
+        alert.category         = "intrusion";
         alert.assetCriticality = "CRITICAL";
-        alert.source = "LoginKeywordDetector";
-        alert.timestamp = System.currentTimeMillis();
+        alert.source           = "LoginKeywordDetector";
+        alert.timestamp        = System.currentTimeMillis();
 
-        int score = AlertScorer.score(alert);
+        int    score      = AlertScorer.score(alert);
         String incidentId = "INC-" + System.currentTimeMillis();
 
         String explanation = String.format(
                 "Login field contained attack keyword '%s' from IP %s targeting user '%s'. Rule: %s. Asset criticality: CRITICAL. This pattern matches %s.",
-                matchedKeyword, ip, user, ruleName, mitre
-        );
+                matchedKeyword, ip, user, ruleName, mitre);
 
         String recommendation = switch (severity) {
             case "CRITICAL" -> String.format(
-                    "Immediately block source IP %s at the perimeter firewall. Isolate host %s. Inspect running processes for C2 beacons or dropped payloads. Escalate to Tier 2.",
-                    ip, host
-            );
+                    "Immediately block source IP %s at the perimeter firewall. Isolate host %s. Inspect running processes for C2 beacons or dropped payloads. Escalate to Tier 2.", ip, host);
             default -> String.format(
-                    "Block source IP %s. Review database query logs on %s for successful injection. Check WAF rules for SQLi coverage.",
-                    ip, host
-            );
+                    "Block source IP %s. Review database query logs on %s for successful injection. Check WAF rules for SQLi coverage.", ip, host);
         };
 
-        return new TriageResponse(
-                incidentId,
-                severity,
-                score,
-                explanation,
-                recommendation,
-                mitre,
-                alert
-        );
+        return new TriageResponse(incidentId, severity, score, explanation, recommendation, mitre, alert);
     }
 
     private String resolveClientIp(HttpServletRequest request) {

@@ -10,9 +10,14 @@ import java.util.List;
 public class UnifiedDashboardController {
 
     private final UnifiedIncidentStore incidentStore;
+    private final RemediationStore     remediationStore;
 
-    public UnifiedDashboardController(UnifiedIncidentStore incidentStore) {
-        this.incidentStore = incidentStore;
+    public UnifiedDashboardController(
+            UnifiedIncidentStore incidentStore,
+            RemediationStore remediationStore
+    ) {
+        this.incidentStore    = incidentStore;
+        this.remediationStore = remediationStore;
     }
 
     @GetMapping("/soc-dashboard")
@@ -20,18 +25,17 @@ public class UnifiedDashboardController {
         List<DashboardIncident> incidents = incidentStore.all();
 
         long criticalCount = incidents.stream()
-                .filter(i -> "CRITICAL".equalsIgnoreCase(i.severity()))
-                .count();
-
+                .filter(i -> "CRITICAL".equalsIgnoreCase(i.severity())).count();
         long highCount = incidents.stream()
-                .filter(i -> "HIGH".equalsIgnoreCase(i.severity()))
-                .count();
+                .filter(i -> "HIGH".equalsIgnoreCase(i.severity())).count();
 
-        model.addAttribute("incidents", incidents);
-        model.addAttribute("latest", incidentStore.latest());
-        model.addAttribute("totalCount", incidents.size());
-        model.addAttribute("criticalCount", criticalCount);
-        model.addAttribute("highCount", highCount);
+        model.addAttribute("incidents",       incidents);
+        model.addAttribute("latest",          incidentStore.latest());
+        model.addAttribute("totalCount",      incidents.size());
+        model.addAttribute("criticalCount",   criticalCount);
+        model.addAttribute("highCount",       highCount);
+        model.addAttribute("blockedIps",      remediationStore.allBlockedIps());
+        model.addAttribute("lockedAccounts",  remediationStore.allLockedAccounts());
 
         return "soc-dashboard";
     }

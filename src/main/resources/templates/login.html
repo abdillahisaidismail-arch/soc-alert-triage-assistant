@@ -167,6 +167,11 @@
         &#x2714; Authenticated successfully. Welcome, admin.
       </div>
 
+
+      <!-- account locked -->
+<div th:if="${accountLocked != null and accountLocked}" class="banner banner-critical">
+  &#x1F512; Account '<span th:text="${username}">user</span>' is locked. Contact your SOC analyst or unlock from the dashboard.
+</div>
       <!-- plain bad credentials -->
       <div th:if="${error != null and error and incident == null}" class="banner banner-error">
         &#x2718; Invalid credentials. Try again.

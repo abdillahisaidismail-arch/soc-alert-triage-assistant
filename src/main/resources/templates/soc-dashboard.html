@@ -393,7 +393,49 @@
         </tbody>
       </table>
     </section>
-
+<!-- ── Remediation Status Panel ─────────────────────────────────────── -->
+<section th:if="${(blockedIps != null and !#lists.isEmpty(blockedIps)) or (lockedAccounts != null and !#lists.isEmpty(lockedAccounts))}" class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th colspan="4" style="color:var(--critical);font-size:12px;">
+          &#x26D4; Active Remediations
+        </th>
+      </tr>
+      <tr>
+        <th>Type</th>
+        <th>Target</th>
+        <th>Linked Incident</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr th:each="entry : ${blockedIps}">
+        <td><span class="sev sev-CRITICAL">Blocked IP</span></td>
+        <td class="mono" th:text="${entry.ip}">0.0.0.0</td>
+        <td class="mono" th:text="${entry.incidentId}">INC-000</td>
+        <td>
+          <a th:href="'/api/actions/unblock-ip?ip=' + ${entry.ip}"
+             style="color:var(--accent);font-size:12px;text-decoration:none;">
+            &#x2714; Unblock
+          </a>
+        </td>
+      </tr>
+      <tr th:each="entry : ${lockedAccounts}">
+        <td><span class="sev sev-HIGH">Locked Account</span></td>
+        <td class="mono" th:text="${entry.username}">user</td>
+        <td class="mono" th:text="${entry.incidentId}">INC-000</td>
+        <td>
+          <a th:href="'/api/actions/unlock-account?user=' + ${entry.username}"
+             style="color:var(--accent);font-size:12px;text-decoration:none;">
+            &#x2714; Unlock
+          </a>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</section>
   </div>
 </body>
 </html>
+<!-- This block is appended — paste it before the last </div></body></html> manually if needed -->
