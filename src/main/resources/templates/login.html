@@ -175,16 +175,19 @@
 
     <div class="login-body">
 
-      <div th:if="${success}" class="banner banner-success">
+      <!-- success banner -->
+      <div th:if="${success != null and success}" class="banner banner-success">
         &#x2714; Authenticated successfully. Welcome, admin.
       </div>
 
-      <div th:if="${error and incident == null}" class="banner banner-error">
+      <!-- plain failure banner (no incident yet) -->
+      <div th:if="${error != null and error and incident == null}" class="banner banner-error">
         &#x2718; Invalid credentials. Try again.
       </div>
 
+      <!-- threshold-crossed banner -->
       <div th:if="${incident != null}" class="banner banner-warning">
-        &#x26A0; Brute-force threshold crossed — incident created &amp; email alert sent to abdillahipro@gmail.com.
+        &#x26A0; Brute-force threshold crossed &mdash; incident created &amp; email alert sent to abdillahipro@gmail.com.
       </div>
 
       <form method="post" action="/login">
