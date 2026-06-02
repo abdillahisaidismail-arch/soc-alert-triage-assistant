@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Port Scan Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:#0d1117;
+      --surface:#161b22;
+      --surface-2:#1c2128;
+      --border:#30363d;
+      --text:#e6edf3;
+      --muted:#8b949e;
+      --accent:#58a6ff;
+      --critical:#ff4d4f;
+      --critical-dim:#3d1010;
+      --high:#fa8c16;
+      --high-dim:#3d2408;
+      --good:#2ea043;
+      --good-dim:#0f2d16;
+    }
+
+    * { box-sizing:border-box; margin:0; padding:0; }
+
+    body {
+      font-family:'JetBrains Mono', monospace;
+      background:var(--bg);
+      color:var(--text);
+      min-height:100vh;
+      padding:32px 20px;
+    }
+
+    .page {
+      max-width:1100px;
+      margin:0 auto;
+      display:flex;
+      flex-direction:column;
+      gap:20px;
+    }
+
+    .hero, .card, .empty {
+      background:var(--surface);
+      border:1px solid var(--border);
+      border-radius:16px;
+    }
+
+    .hero {
+      padding:24px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:16px;
+      flex-wrap:wrap;
+    }
+
+    .hero h1 {
+      font-size:28px;
+      margin-bottom:6px;
+    }
+
+    .hero p {
+      color:var(--muted);
+      max-width:70ch;
+      line-height:1.6;
+      font-size:14px;
+    }
+
+    .pill {
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:8px 14px;
+      border-radius:999px;
+      font-size:12px;
+      font-weight:700;
+      text-transform:uppercase;
+      letter-spacing:0.4px;
+    }
+
+    .pill::before {
+      content:'';
+      width:8px;
+      height:8px;
+      border-radius:50%;
+      background:currentColor;
+    }
+
+    .pill-critical {
+      color:var(--critical);
+      background:var(--critical-dim);
+      border:1px solid var(--critical-dim);
+    }
+
+    .pill-high {
+      color:var(--high);
+      background:var(--high-dim);
+      border:1px solid var(--high-dim);
+    }
+
+    .grid {
+      display:grid;
+      grid-template-columns:repeat(12, 1fr);
+      gap:20px;
+    }
+
+    .span-4 { grid-column:span 4; }
+    .span-6 { grid-column:span 6; }
+    .span-8 { grid-column:span 8; }
+    .span-12 { grid-column:span 12; }
+
+    .card {
+      padding:20px;
+    }
+
+    .label {
+      color:var(--muted);
+      font-size:11px;
+      text-transform:uppercase;
+      letter-spacing:0.5px;
+      margin-bottom:8px;
+    }
+
+    .value {
+      font-size:22px;
+      font-weight:700;
+      line-height:1.3;
+      word-break:break-word;
+    }
+
+    .small {
+      font-size:14px;
+      line-height:1.7;
+      color:var(--text);
+    }
+
+    .muted {
+      color:var(--muted);
+    }
+
+    .score {
+      display:flex;
+      align-items:end;
+      gap:12px;
+    }
+
+    .score-num {
+      font-size:56px;
+      font-weight:700;
+      color:var(--high);
+      line-height:1;
+    }
+
+    .score-track {
+      margin-top:12px;
+      width:100%;
+      height:10px;
+      background:var(--surface-2);
+      border-radius:999px;
+      overflow:hidden;
+      border:1px solid var(--border);
+    }
+
+    .score-fill {
+      height:100%;
+      background:var(--high);
+    }
+
+    .ports {
+      display:grid;
+      grid-template-columns:repeat(auto-fit, minmax(88px, 1fr));
+      gap:10px;
+      margin-top:14px;
+    }
+
+    .port {
+      background:var(--surface-2);
+      border:1px solid var(--border);
+      border-radius:10px;
+      padding:10px 12px;
+      text-align:center;
+      font-size:14px;
+      font-weight:700;
+    }
+
+    .rec {
+      background:#1f3a5f;
+      border-left:3px solid var(--accent);
+      border-radius:0 8px 8px 0;
+      padding:14px 16px;
+      line-height:1.7;
+      font-size:14px;
+    }
+
+    .empty {
+      padding:28px;
+      text-align:center;
+    }
+
+    .empty h2 {
+      margin-bottom:10px;
+      font-size:20px;
+    }
+
+    .empty p {
+      color:var(--muted);
+      line-height:1.7;
+      max-width:62ch;
+      margin:0 auto;
+      font-size:14px;
+    }
+
+    .topline {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      margin-bottom:14px;
+      flex-wrap:wrap;
+    }
+
+    .mono-list {
+      display:grid;
+      gap:8px;
+    }
+
+    @media (max-width: 860px) {
+      .span-4, .span-6, .span-8, .span-12 {
+        grid-column:span 12;
+      }
+      .score-num {
+        font-size:42px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+
+    <section class="hero">
+      <div>
+        <h1>Port Scan Monitoring Dashboard</h1>
+        <p>Latest simulated network reconnaissance incident, enriched with source IP, geographic origin, ISP, scanned ports, MITRE ATT&amp;CK mapping, and analyst guidance.</p>
+      </div>
+      <div th:if="${incident != null}"
+           class="pill"
+           th:classappend="${incident.severity == 'CRITICAL'} ? ' pill-critical' : ' pill-high'"
+           th:text="${incident.severity}">
+        HIGH
+      </div>
+    </section>
+
+    <section th:if="${incident == null}" class="empty">
+      <h2>No incident yet</h2>
+      <p>Run the probe simulator against <strong>/api/probes/{port}</strong> and this page will display the latest port-scan incident as soon as the threshold is crossed.</p>
+    </section>
+
+    <section th:if="${incident != null}" class="grid">
+
+      <div class="card span-4">
+        <div class="label">Incident ID</div>
+        <div class="value" th:text="${incident.incidentId}">INC-000</div>
+      </div>
+
+      <div class="card span-4">
+        <div class="label">MITRE Technique</div>
+        <div class="value" style="font-size:18px;" th:text="${incident.mitreTechnique}">T1046 — Network Service Scanning</div>
+      </div>
+
+      <div class="card span-4">
+        <div class="label">Risk score</div>
+        <div class="score">
+          <div class="score-num"
+               th:style="${incident.severity == 'CRITICAL'} ? 'color:var(--critical)' : 'color:var(--high)'"
+               th:text="${incident.riskScore}">
+            80
+          </div>
+          <div class="muted">/100</div>
+        </div>
+        <div class="score-track">
+          <div class="score-fill"
+               th:style="'width:' + ${incident.riskScore} + '%;' + (${incident.severity == 'CRITICAL'} ? 'background:var(--critical);' : 'background:var(--high);')">
+          </div>
+        </div>
+      </div>
+
+      <div class="card span-4">
+        <div class="label">Source IP</div>
+        <div class="value" th:text="${incident.sourceIp}">45.83.1.10</div>
+      </div>
+
+      <div class="card span-4">
+        <div class="label">Country</div>
+        <div class="value" th:text="${incident.country}">France</div>
+      </div>
+
+      <div class="card span-4">
+        <div class="label">City</div>
+        <div class="value" th:text="${incident.city}">Rennes</div>
+      </div>
+
+      <div class="card span-6">
+        <div class="label">ISP / Network origin</div>
+        <div class="value" style="font-size:20px;" th:text="${incident.isp}">Example ISP</div>
+      </div>
+
+      <div class="card span-3">
+        <div class="label">Distinct ports</div>
+        <div class="value" th:text="${#lists.size(incident.portsScanned)}">10</div>
+      </div>
+
+      <div class="card span-3">
+        <div class="label">Total probes</div>
+        <div class="value" th:text="${incident.totalProbes}">12</div>
+      </div>
+
+      <div class="card span-6">
+        <div class="label">Scan duration</div>
+        <div class="value" th:text="${incident.durationSeconds + ' seconds'}">8 seconds</div>
+      </div>
+
+      <div class="card span-12">
+        <div class="topline">
+          <div class="label" style="margin-bottom:0;">Ports scanned</div>
+          <div class="muted" style="font-size:12px;">Distinct ports touched by the same source IP in the detection window</div>
+        </div>
+        <div class="ports">
+          <div class="port" th:each="p : ${incident.portsScanned}" th:text="${p}">
+            22
+          </div>
+        </div>
+      </div>
+
+      <div class="card span-6">
+        <div class="label">Why this was flagged</div>
+        <div class="small" th:text="${incident.explanation}">
+          Source IP scanned multiple ports rapidly.
+        </div>
+      </div>
+
+      <div class="card span-6">
+        <div class="label">Analyst recommendation</div>
+        <div class="rec" th:text="${incident.recommendation}">
+          Block IP and review exposed services.
+        </div>
+      </div>
+
+    </section>
+  </div>
+</body>
+</html>
